@@ -1,9 +1,19 @@
+//import DBHelper from './dbhelper';
+
 let restaurants,
   neighborhoods,
   cuisines
 var map
 var markers = [];
 
+/**
+ * Service Worker init
+ * */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker
+           .register('./serviceWorker.js')
+           .then(function() { console.log('Service Worker Registered'); });
+}
 /**
  * Fetch neighborhoods and cuisines as soon as the page is loaded.
  */
@@ -149,7 +159,7 @@ createRestaurantHTML = (restaurant) => {
   image.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
   li.append(image);
 
-  const name = document.createElement('h1');
+  const name = document.createElement('h2');
   name.innerHTML = restaurant.name;
   li.append(name);
 
@@ -162,6 +172,7 @@ createRestaurantHTML = (restaurant) => {
   li.append(address);
 
   const more = document.createElement('a');
+  more.setAttribute('role',"button");
   more.innerHTML = 'View Details';
   more.href = DBHelper.urlForRestaurant(restaurant);
   li.append(more);

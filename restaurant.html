@@ -43,7 +43,8 @@
     <!-- End map -->
     <!-- Beginning restaurant -->
     <section id="restaurant-container" tabindex=”0″>
-      <h1 id="restaurant-name" tabfocus="0"></h1>
+      <h2 id="restaurant-name" tabfocus="0"></h2>
+	  <p><button id="favBtn">⭐️ Favorite</button></p>
       <img id="restaurant-img" alt="Image of the restaurant">
       <p id="restaurant-cuisine"></p>
       <p id="restaurant-address"></p>
@@ -54,13 +55,22 @@
     <!-- Beginning reviews -->
     <section id="reviews-container">
     <ul id="reviews-list"></ul>
-	<h4>Add a Review :</h4>
-    <form action="" id="review-form">
-     <input type="text" name="name" placeholder="Name">
-     <input type="number" name="rating" max="5" min="0" placeholder="Rating">
-     <textarea name="comment" cols="30" rows="10"  placeholder="Rating"></textarea>
-     <input type="button" value="Submit" onclick="postReview()">
-    </form>
+	</section>
+    <section id="new-review">
+      <h3 tabindex="0">Add Your Review</h3>
+      <form action="" id="review-form" aria-label="new-review" role="form">
+        <input type="text" placeholder="Name" id="name" aria-label="Review Author Name">
+        <select name="rating" id="rating" aria-label="Rating">
+          <option value="none" disabled selected>Rating</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+        <textarea name="comment" id="comment" cols="40" rows="10" placeholder="Comments " aria-label="Review"></textarea>
+        <input id="submit" type="submit">
+      </form>
     </section>
     <!-- End reviews -->
   </main>
@@ -74,7 +84,7 @@
 
   <!-- Beginning scripts -->
   <script src="js/lazyload.min.js" async=""></script>
-  <script type="application/javascript" charset="utf-8" src="js/idb.js"></script>
+  <script type="text/javascript" src="js/idb.js"></script>
   <!-- Database helpers -->
   <script type="text/javascript" src="js/dbhelper.js"></script>
   <!-- Main javascript file -->

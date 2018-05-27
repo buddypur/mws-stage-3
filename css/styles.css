@@ -109,7 +109,7 @@ nav h1 a {
 .filter-options {
   width: 100%;
   min-height: 50px;
-  background-color: tomato;
+  background-color: #3397DB;
   align-items: center;
 }
 .filter-options h2 {
@@ -229,7 +229,6 @@ nav h1 a {
 }
 .inside #footer {
   bottom: 0;
-  position: absolute;
   width: 50%;
 }
 table {
@@ -346,7 +345,9 @@ table tr:nth-child(2n+1) {
 #restaurant-hours td {
   color: #666;
 }
-
+#new-review{
+	padding:10px;
+}
 input,textarea {
   width: 100%;
   padding-top: 10px;

@@ -1,5 +1,4 @@
 let restaurant;
-let reviews;
 var map;
 
 const skipLink = document.querySelector(".skip-link");
@@ -32,33 +31,63 @@ window.initMap = () => {
   });
 };
 
+/*
+ * fetch reviews
+ */
+fetchReviews = () => {
+  const id = getParameterByName('id');
+  if (!id) {
+    console.log('No ID in URL');
+    return;
+  }
+  DBHelper.fetchReviewsForRestaurant(id, (err, reviews) => {
+    self.reviews = reviews;
+    if (err || !reviews) {
+      console.log('reviews fetch error', err);
+      return;
+    }
+    fillReviewsHTML(reviews);
+  });
+}
+
 /**
  * Get current restaurant from page URL.
  */
 fetchRestaurantFromURL = (callback) => {
   if (self.restaurant) { // restaurant already fetched!
-    callback(null, self.restaurant);
+    callback(null, self.restaurant)
     return;
   }
-  const id = this.getParameterByName('id');
+  const id = getParameterByName('id');
   if (!id) { // no id found in URL
-   let error = 'No restaurant id in URL';
+   error = 'No restaurant id in URL'
     callback(error, null);
   } else {
-    DBHelper.fetchReviews((error, reviews) => {
-      self.reviews = reviews.filter(review => review.restaurant_id == id);
-    })
     DBHelper.fetchRestaurantById(id, (error, restaurant) => {
       self.restaurant = restaurant;
       if (!restaurant) {
         console.error(error);
         return;
       }
-      this.fillRestaurantHTML();
-      callback(null, restaurant);
+      fillRestaurantHTML();
+      callback(null, restaurant)
     });
   }
-};
+}
+
+/*
+ * set favorite button
+ */
+setFavoriteButton = (status) => {
+  const favorite = document.getElementById('favBtn');
+  if (status === 'true') {
+    favorite.title = 'Restaurant is Favorite';
+    favorite.innerHTML = '⭐️ Unfavorite';
+  } else {
+    favorite.title = 'Restaurant is not Favorite';
+    favorite.innerHTML = '☆ Favorite';
+  }
+}
 
 /**
  * Create restaurant HTML and add it to the webpage
@@ -68,6 +97,9 @@ fillRestaurantHTML = (restaurant = self.restaurant) => {
   name.innerHTML = restaurant.name;
   name.tabIndex = '0';
 
+  // favorite
+  setFavoriteButton(restaurant.is_favorite);
+  
   const address = document.getElementById('restaurant-address');
   address.innerHTML = restaurant.address;
 
@@ -81,12 +113,11 @@ fillRestaurantHTML = (restaurant = self.restaurant) => {
   const cuisine = document.getElementById('restaurant-cuisine');
   cuisine.innerHTML = restaurant.cuisine_type;
 
-  // fill operating hours
   if (restaurant.operating_hours) {
-    this.fillRestaurantHoursHTML();
+    fillRestaurantHoursHTML();
   }
-  // fill reviews
-  this.fillReviewsHTML();
+
+ fetchReviews();
 };
 
 /**
@@ -114,9 +145,9 @@ fillRestaurantHoursHTML = (operatingHours = self.restaurant.operating_hours) => 
 /**
  * Create all reviews HTML and add them to the webpage.
  */
-fillReviewsHTML = (reviews = self.reviews) => {
+fillReviewsHTML = (reviews = self.restaurant.reviews) => {
   const container = document.getElementById('reviews-container');
-  const title = document.createElement('h2');
+  const title = document.createElement('h3');
   title.innerHTML = 'Reviews';
   title.tabIndex = '0';
   container.appendChild(title);
@@ -140,20 +171,17 @@ fillReviewsHTML = (reviews = self.reviews) => {
  */
 createReviewHTML = (review) => {
   const li = document.createElement('li');
-
-  const header = document.createElement('header');
-
   const name = document.createElement('p');
-  name.className = 'name'
   name.innerHTML = review.name;
+  name.className = 'reviewerName';
+  li.appendChild(name);
   name.tabIndex = '0';
-  header.appendChild(name);
+
   const date = document.createElement('p');
   date.innerHTML = review.date;
-  date.className = 'date'
-  header.appendChild(date);
-  li.appendChild(header);
-  
+  date.className = 'date';
+  li.appendChild(date);
+
   const rating = document.createElement('p');
   rating.innerHTML = `Rating: ${review.rating}`;
   rating.tabIndex = '0';
@@ -168,11 +196,37 @@ createReviewHTML = (review) => {
   return li;
 };
 
+/* Managing reviews */
+navigator.serviceWorker.ready.then(function (swRegistration) {
+  let form = document.querySelector('#review-form');
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    let rating = form.querySelector('#rating');
+    let review = {
+      restaurant_id: getParameterByName('id'),
+      name: form.querySelector('#name').value,
+      rating: rating.options[rating.selectedIndex].value,
+      comments: form.querySelector('#comment').value
+    };
+    console.log(review);
+    
+    DBHelper.openDatabase().then(function(db){
+      var transaction = db.transaction('outbox', 'readwrite');
+      return transaction.objectStore('outbox').put(review);
+    }).then(function () {
+      form.reset();
+      return swRegistration.sync.register('sync').then(() => {
+        console.log('Sync registered');
+      });
+    });
+  });
+});
+
 /**
  * Add restaurant name to the breadcrumb navigation menu
  */
 fillBreadcrumb = (restaurant=self.restaurant) => {
-  const breadcrumb = document.getElementById('breadcrumb').children[0];
+  const breadcrumb = document.getElementById('breadcrumb');
   const li = document.createElement('li');
   li.setAttribute('aria-current', 'page');
   li.innerHTML = restaurant.name;
@@ -193,19 +247,29 @@ getParameterByName = (name, url) => {
   if (!results[2])
     return '';
   return decodeURIComponent(results[2].replace(/\+/g, ' '));
-};
-
-function postReview() {
-  const id = getParameterByName('id');
-  const name = document.getElementById("review-form").elements.namedItem("name").value;
-  const rating = document.getElementById("review-form").elements.namedItem("rating").value;
-  const comment = document.getElementById("review-form").elements.namedItem("comment").value;
-  const review = {
-    "restaurant_id": id,
-    "name": name.trim(),
-    "rating": rating,
-    "comments": comment.trim()
-  }
-  DBHelper.postReview(review);
-  location.reload();
 }
+
+/* Managing favorites */
+navigator.serviceWorker.ready.then(function (swRegistration) {
+  let btn = document.getElementById('favBtn');
+  btn.addEventListener('click', e => {
+    const opposite = (self.restaurant.is_favorite === 'true') ? 'false' : 'true';
+    console.log('clicked');
+    let res = {
+      resId: getParameterByName('id'),
+      favorite: opposite
+    };
+    idb.open('favorite', 1, function (upgradeDb) {
+      upgradeDb.createObjectStore('outbox', { autoIncrement: true, keyPath: 'id' });
+    }).then(function (db) {
+      var transaction = db.transaction('outbox', 'readwrite');
+      return transaction.objectStore('outbox').put(res);
+    }).then(function () {
+      setFavoriteButton(opposite);
+      self.restaurant.is_favorite = opposite;
+      return swRegistration.sync.register('favorite').then(() => {
+        console.log('Favorite Sync registered');
+      });
+    });
+  });
+});
